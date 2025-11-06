@@ -3,28 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:myapp/models/task.dart';
 import 'package:myapp/providers/task_provider.dart';
+import 'package:myapp/screens/settings_screen.dart';
 
 void main() {
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => ThemeProvider()),
-        ChangeNotifierProvider(create: (context) => TaskProvider()),
-      ],
+    ChangeNotifierProvider(
+      create: (context) => TaskProvider(),
       child: const MyApp(),
     ),
   );
-}
-
-class ThemeProvider with ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.system;
-
-  ThemeMode get themeMode => _themeMode;
-
-  void toggleTheme() {
-    _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-    notifyListeners();
-  }
 }
 
 class MyApp extends StatelessWidget {
@@ -32,10 +19,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color primarySeedColor = Colors.blue;
+    const MaterialColor primarySeedColor = Colors.teal;
 
     final TextTheme appTextTheme = TextTheme(
-      displayLarge: GoogleFonts.oswald(fontSize: 57, fontWeight: FontWeight.bold),
+      displayLarge:
+          GoogleFonts.oswald(fontSize: 57, fontWeight: FontWeight.bold),
       titleLarge: GoogleFonts.roboto(fontSize: 22, fontWeight: FontWeight.w500),
       bodyMedium: GoogleFonts.openSans(fontSize: 14),
     );
@@ -50,52 +38,81 @@ class MyApp extends StatelessWidget {
       appBarTheme: AppBarTheme(
         backgroundColor: primarySeedColor,
         foregroundColor: Colors.white,
-        titleTextStyle: GoogleFonts.oswald(fontSize: 24, fontWeight: FontWeight.bold),
+        titleTextStyle:
+            GoogleFonts.oswald(fontSize: 24, fontWeight: FontWeight.bold),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           foregroundColor: Colors.white,
           backgroundColor: primarySeedColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          textStyle: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w500),
+          textStyle:
+              GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w500),
         ),
       ),
     );
 
-    final ThemeData darkTheme = ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primarySeedColor,
-        brightness: Brightness.dark,
-      ),
-      textTheme: appTextTheme,
-      appBarTheme: AppBarTheme(
-        backgroundColor: Colors.grey[900],
-        foregroundColor: Colors.white,
-        titleTextStyle: GoogleFonts.oswald(fontSize: 24, fontWeight: FontWeight.bold),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.black,
-          backgroundColor: primarySeedColor.shade200,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          textStyle: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w500),
-        ),
-      ),
+    return MaterialApp(
+      title: 'To-Do App',
+      theme: lightTheme,
+      home: const MainScreen(),
     );
+  }
+}
 
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
-        return MaterialApp(
-          title: 'To-Do App',
-          theme: lightTheme,
-          darkTheme: darkTheme,
-          themeMode: themeProvider.themeMode,
-          home: const HomeScreen(),
-        );
-      },
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  int _selectedIndex = 0;
+
+  static const List<Widget> _widgetOptions = <Widget>[
+    HomeScreen(),
+    SettingsScreen(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _widgetOptions.elementAt(_selectedIndex),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
+      floatingActionButton: _selectedIndex == 0
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const AddTaskScreen()),
+                );
+              },
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }
@@ -108,38 +125,35 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('To-Do List'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.lightbulb_outline),
-            onPressed: () {
-              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
-            },
-          ),
-        ],
       ),
       body: Consumer<TaskProvider>(
         builder: (context, taskProvider, child) {
-          return ListView.builder(
-            itemCount: taskProvider.tasks.length,
-            itemBuilder: (context, index) {
-              final task = taskProvider.tasks[index];
-              return TaskTile(
-                task: task,
-                onChanged: (_) => taskProvider.toggleTaskStatus(index),
-                onDelete: () => taskProvider.deleteTask(index),
-              );
-            },
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Welcome to your To-Do List!',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: taskProvider.tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = taskProvider.tasks[index];
+                    return TaskTile(
+                      task: task,
+                      onChanged: (_) =>
+                          taskProvider.toggleTaskStatus(index),
+                      onDelete: () => taskProvider.deleteTask(index),
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddTaskScreen()),
-          );
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -163,16 +177,21 @@ class TaskTile extends StatelessWidget {
       title: Text(
         task.title,
         style: TextStyle(
-          decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+          decoration:
+              task.isCompleted ? TextDecoration.lineThrough : null,
         ),
       ),
       leading: Checkbox(
         value: task.isCompleted,
         onChanged: onChanged,
+        activeColor: Colors.teal,
+        checkColor: Colors.white,
       ),
       trailing: IconButton(
         icon: const Icon(Icons.delete),
         onPressed: onDelete,
+        splashRadius: 24,
+        tooltip: 'Delete Task',
       ),
     );
   }
